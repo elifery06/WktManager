@@ -48,7 +48,7 @@ namespace WktManager.Controllers
             return Ok(new { message = result.Message, data = result.Data });
         }
 
-        [HttpPost]
+      
         [HttpPost]
         public IActionResult Add([FromBody] WktCoordinateDto dto)
         {
