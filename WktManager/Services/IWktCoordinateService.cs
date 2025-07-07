@@ -1,18 +1,14 @@
-﻿using System.Collections.Generic;
-using WktManager.DTOs;
-using WktManager.Models;
+﻿using WktManager.DTOs;
 using WktManager.Responses;
+using System.Collections.Generic;
 
-namespace WktManager.Services
+public interface IWktCoordinateService
 {
-    public interface IWktCoordinateService
-    {
-        Result GetAll();
-        Result GetRange(int startIndex, int count);
-        Result GetById(int id);
-        Result Add(WktCoordinateDto dto);
-        Result AddRange(List<WktCoordinateDto> dtos);
-        Result Update(int id, WktCoordinateDto dto);
-        Result Delete(int id);
-    }
+    Result GetAll();
+    Result GetById(int id);
+    Result GetRange(int startIndex, int count);
+    Result Add(WktCoordinateDto dto);
+    Result AddRange(List<WktCoordinateDto> dtos);
+    Result Update(int id, WktCoordinateDto dto);
+    Result Delete(int id);
 }

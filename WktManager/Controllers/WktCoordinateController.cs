@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using WktManager.DTOs;
-using WktManager.Services;
+using WktManager.Repositories;
+
 
 namespace WktManager.Controllers
 {
@@ -69,6 +70,8 @@ namespace WktManager.Controllers
             if (!result.Success)
                 return BadRequest(new { message = result.Message });
 
+
+
             return Ok(new { message = result.Message, data = result.Data });
         }
 
@@ -95,5 +98,6 @@ namespace WktManager.Controllers
         }
     }
 }
+
 //trycatch yaz add de
 //rsut ları buraya yaz 
