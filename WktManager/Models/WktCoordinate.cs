@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using NetTopologySuite.Geometries;
+using System.Text.RegularExpressions;
 
 namespace WktManager.Models
 {
@@ -6,7 +7,8 @@ namespace WktManager.Models
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public string WKT { get; set; }
+        public Geometry WKT { get; set; }
+      
 
     }
 }

@@ -1,29 +1,46 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using WktManager.Data;
 using WktManager.Repositories;
-
+using NetTopologySuite;
+using NetTopologySuite.IO.Converters;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DbContext ve PostgreSQL baðlantýsý
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
+// DbContext'i NetTopologySuite ile sadece bir kere konfigure et
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+        npgsqlOptions.UseNetTopologySuite()));
 
+// Servislerin eklenmesi
 builder.Services.AddScoped<IWktCoordinateService, WktCoordinateService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // GeoJSON desteði ve diðer JSON ayarlarý
+        options.JsonSerializerOptions.NumberHandling =
+            System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals;
+        options.JsonSerializerOptions.Converters.Add(new GeoJsonConverterFactory());
+    });
 
-
-builder.Services.AddControllers();
-
+// Swagger ayarlarý
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// CORS politikasý ekle
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 var app = builder.Build();
 
@@ -34,6 +51,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowAll");
+
 app.UseAuthorization();
 
 app.MapControllers();

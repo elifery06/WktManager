@@ -99,5 +99,3 @@ namespace WktManager.Controllers
     }
 }
 
-//trycatch yaz add de
-//rsut ları buraya yaz 

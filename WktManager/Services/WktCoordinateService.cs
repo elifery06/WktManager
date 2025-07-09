@@ -3,7 +3,10 @@ using WktManager.DTOs;
 using WktManager.Models;
 using WktManager.Repositories;
 using WktManager.Responses;
-
+using NetTopologySuite.Geometries;
+using NetTopologySuite.IO;
+using System.Collections.Generic;
+using System.Linq;
 
 public class WktCoordinateService : IWktCoordinateService
 {
@@ -27,9 +30,20 @@ public class WktCoordinateService : IWktCoordinateService
         return Regex.IsMatch(wkt.Trim(), pattern, RegexOptions.IgnoreCase);
     }
 
+    private Geometry ToGeometry(string wkt)
+    {
+        return new WKTReader().Read(wkt);
+    }
+
     public Result GetAll()
     {
-        var list = _unitOfWork.Repository<WktCoordinate>().GetAll();
+        var list = _unitOfWork.Repository<WktCoordinate>().GetAll()
+            .Select(e => new WktCoordinateDto
+            {
+                Name = e.Name,
+                WKT = e.WKT.AsText()
+            })
+            .ToList();
 
         return new Result
         {
@@ -44,46 +58,51 @@ public class WktCoordinateService : IWktCoordinateService
         var entity = _unitOfWork.Repository<WktCoordinate>().GetById(id);
 
         if (entity == null)
-        {
             return new Result
             {
                 Success = false,
-                Message = "Böyle bir kayıt bulunamadı.",
-                Data = null
+                Message = "Böyle bir kayıt bulunamadı."
             };
-        }
+
+        var dto = new WktCoordinateDto
+        {
+            Name = entity.Name,
+            WKT = entity.WKT.AsText()
+        };
 
         return new Result
         {
             Success = true,
             Message = "Kayıt bulundu.",
-            Data = entity
+            Data = dto
         };
     }
 
     public Result GetRange(int startIndex, int count)
     {
         if (startIndex < 0 || count < 0)
-        {
             return new Result
             {
                 Success = false,
                 Message = "startIndex veya count negatif olamaz."
             };
-        }
 
-        var all = _unitOfWork.Repository<WktCoordinate>().GetAll();
+        var all = _unitOfWork.Repository<WktCoordinate>().GetAll().ToList();
 
         if (startIndex >= all.Count)
-        {
             return new Result
             {
                 Success = false,
                 Message = "startIndex kayıt sayısından büyük olamaz."
             };
-        }
 
-        var range = all.Skip(startIndex).Take(count).ToList();
+        var range = all.Skip(startIndex).Take(count)
+            .Select(e => new WktCoordinateDto
+            {
+                Name = e.Name,
+                WKT = e.WKT.AsText()
+            })
+            .ToList();
 
         return new Result
         {
@@ -96,28 +115,32 @@ public class WktCoordinateService : IWktCoordinateService
     public Result Add(WktCoordinateDto dto)
     {
         if (!IsValidWKT(dto.WKT))
-        {
             return new Result
             {
                 Success = false,
                 Message = "Geçerli bir WKT formatı giriniz."
             };
-        }
 
         var entity = new WktCoordinate
         {
             Name = dto.Name,
-            WKT = dto.WKT
+            WKT = ToGeometry(dto.WKT)
         };
 
         _unitOfWork.Repository<WktCoordinate>().Add(entity);
         _unitOfWork.Commit();
 
+        var resultDto = new WktCoordinateDto
+        {
+            Name = entity.Name,
+            WKT = entity.WKT.AsText()
+        };
+
         return new Result
         {
             Success = true,
             Message = "Kayıt başarıyla eklendi.",
-            Data = entity
+            Data = resultDto
         };
     }
 
@@ -126,82 +149,86 @@ public class WktCoordinateService : IWktCoordinateService
         foreach (var dto in dtos)
         {
             if (!IsValidWKT(dto.WKT))
-            {
                 return new Result
                 {
                     Success = false,
                     Message = $"Geçersiz WKT: {dto.Name}"
                 };
-            }
         }
 
         var entities = dtos.Select(dto => new WktCoordinate
         {
             Name = dto.Name,
-            WKT = dto.WKT
+            WKT = ToGeometry(dto.WKT)
         }).ToList();
 
         _unitOfWork.Repository<WktCoordinate>().AddRange(entities);
         _unitOfWork.Commit();
 
+        var resultDtos = entities.Select(e => new WktCoordinateDto
+        {
+            Name = e.Name,
+            WKT = e.WKT.AsText()
+        }).ToList();
+
         return new Result
         {
             Success = true,
             Message = $"{entities.Count} kayıt başarıyla eklendi.",
-            Data = entities
+            Data = resultDtos
         };
     }
 
     public Result Update(int id, WktCoordinateDto dto)
     {
         var repository = _unitOfWork.Repository<WktCoordinate>();
-
         var existing = repository.GetById(id);
+
         if (existing == null)
-        {
             return new Result
             {
                 Success = false,
                 Message = "Güncellenecek kayıt bulunamadı."
             };
-        }
 
         if (!IsValidWKT(dto.WKT))
-        {
             return new Result
             {
                 Success = false,
                 Message = "Geçerli bir WKT formatı giriniz."
             };
-        }
 
         existing.Name = dto.Name;
-        existing.WKT = dto.WKT;
+        existing.WKT = ToGeometry(dto.WKT);
 
         repository.Update(existing);
         _unitOfWork.Commit();
+
+        var updatedDto = new WktCoordinateDto
+        {
+            Name = existing.Name,
+            WKT = existing.WKT.AsText()
+        };
 
         return new Result
         {
             Success = true,
             Message = "Kayıt başarıyla güncellendi.",
-            Data = existing
+            Data = updatedDto
         };
     }
 
     public Result Delete(int id)
     {
         var repository = _unitOfWork.Repository<WktCoordinate>();
-
         var existing = repository.GetById(id);
+
         if (existing == null)
-        {
             return new Result
             {
                 Success = false,
                 Message = "Silinecek kayıt bulunamadı."
             };
-        }
 
         repository.Delete(existing);
         _unitOfWork.Commit();
@@ -213,252 +240,3 @@ public class WktCoordinateService : IWktCoordinateService
         };
     }
 }
-
-//public class WktCoordinateService : IWktCoordinateService
-//{
-//    private readonly IUnitOfWork _unitOfWork;
-//    private readonly IRepository<WktCoordinate> _repository;
-
-//    public WktCoordinateService(IUnitOfWork unitOfWork)
-//    {
-//        _unitOfWork = unitOfWork;
-//        _repository = _unitOfWork.Repository<WktCoordinate>();
-//    }
-
-//    private bool IsValidWKT(string wkt)
-//    {
-//        if (string.IsNullOrWhiteSpace(wkt)) return false;
-//        var trimmed = wkt.Trim();
-
-//        var pattern = @"^(POINT\s*\(\s*-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s*\)|" +
-//                      @"LINESTRING\s*\(\s*(-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s*,\s*)*" +
-//                      @"-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s*\)|" +
-//                      @"POLYGON\s*\(\s*\(\s*(-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s*,\s*)*" +
-//                      @"-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s*\)\s*\))$";
-
-//        return Regex.IsMatch(trimmed, pattern, RegexOptions.IgnoreCase);
-//    }
-
-//    public Result GetAll()
-//    {
-//        var list = _repository.GetAll().ToList();
-
-//        return new Result
-//        {
-//            Success = true,
-//            Message = $"{list.Count} kayıt bulundu.",
-//            Data = list
-//        };
-//    }
-
-//    public Result GetById(int id)
-//    {
-//        var entity = _repository.GetById(id);
-//        if (entity == null)
-//        {
-//            return new Result
-//            {
-//                Success = false,
-//                Message = "Böyle bir kayıt bulunamadı.",
-//                Data = null
-//            };
-//        }
-
-//        return new Result
-//        {
-//            Success = true,
-//            Message = "Kayıt bulundu.",
-//            Data = entity
-//        };
-//    }
-
-//    public Result GetRange(int startIndex, int count)
-//    {
-//        if (startIndex < 0 || count < 0)
-//        {
-//            return new Result
-//            {
-//                Success = false,
-//                Message = "startIndex veya count negatif olamaz.",
-//                Data = null
-//            };
-//        }
-
-//        var all = _repository.GetAll();
-//        var totalCount = all.Count;
-
-//        if (startIndex >= totalCount)
-//        {
-//            return new Result
-//            {
-//                Success = false,
-//                Message = "startIndex kayıt sayısından büyük olamaz.",
-//                Data = null
-//            };
-//        }
-
-//        var range = all.Skip(startIndex).Take(count).ToList();
-
-//        return new Result
-//        {
-//            Success = true,
-//            Message = $"{range.Count} kayıt getirildi.",
-//            Data = range
-//        };
-//    }
-
-//    public Result Add(WktCoordinateDto dto)
-//    {
-//        if (!IsValidWKT(dto.WKT))
-//        {
-//            return new Result
-//            {
-//                Success = false,
-//                Message = "Geçerli bir WKT formatı giriniz.",
-//                Data = null
-//            };
-//        }
-
-//        try
-//        {
-//            var entity = new WktCoordinate
-//            {
-//                Name = dto.Name,
-//                WKT = dto.WKT
-//            };
-
-//            _repository.Add(entity);
-//            _unitOfWork.Commit();
-
-//            return new Result
-//            {
-//                Success = true,
-//                Message = "Kayıt başarıyla eklendi.",
-//                Data = entity
-//            };
-//        }
-//        catch (Exception ex)
-//        {
-//            return new Result
-//            {
-//                Success = false,
-//                Message = $"Kayıt oluşturulurken hata oluştu: {ex.Message}"
-//            };
-//        }
-//    }
-
-//    public Result AddRange(List<WktCoordinateDto> dtos)
-//    {
-//        foreach (var dto in dtos)
-//        {
-//            if (!IsValidWKT(dto.WKT))
-//            {
-//                return new Result
-//                {
-//                    Success = false,
-//                    Message = $"Geçersiz WKT: {dto.Name}",
-//                    Data = null
-//                };
-//            }
-//        }
-
-//        var entities = dtos.Select(dto => new WktCoordinate
-//        {
-//            Name = dto.Name,
-//            WKT = dto.WKT
-//        }).ToList();
-
-//        _repository.AddRange(entities);
-//        _unitOfWork.Commit();
-
-//        return new Result
-//        {
-//            Success = true,
-//            Message = $"{entities.Count} kayıt başarıyla eklendi.",
-//            Data = entities
-//        };
-//    }
-
-//    public Result Update(int id, WktCoordinateDto dto)
-//    {
-//        try
-//        {
-//            var existing = _repository.GetById(id);
-//            if (existing == null)
-//            {
-//                return new Result
-//                {
-//                    Success = false,
-//                    Message = "Güncellenecek kayıt bulunamadı.",
-//                    Data = null
-//                };
-//            }
-
-//            if (!IsValidWKT(dto.WKT))
-//            {
-//                return new Result
-//                {
-//                    Success = false,
-//                    Message = "Geçerli bir WKT formatı giriniz.",
-//                    Data = null
-//                };
-//            }
-
-//            existing.Name = dto.Name;
-//            existing.WKT = dto.WKT;
-
-//            _repository.Update(existing);
-//            _unitOfWork.Commit();
-
-//            return new Result
-//            {
-//                Success = true,
-//                Message = "Kayıt başarıyla güncellendi.",
-//                Data = existing
-//            };
-//        }
-//        catch (Exception ex)
-//        {
-//            return new Result
-//            {
-//                Success = false,
-//                Message = $"Güncelleme sırasında hata oluştu: {ex.Message}"
-//            };
-//        }
-//    }
-
-//    public Result Delete(int id)
-//    {
-//        try
-//        {
-//            var existing = _repository.GetById(id);
-//            if (existing == null)
-//            {
-//                return new Result
-//                {
-//                    Success = false,
-//                    Message = "Silinecek kayıt bulunamadı.",
-//                    Data = null
-//                };
-//            }
-
-//            _repository.Delete(existing);
-//            _unitOfWork.Commit();
-
-//            return new Result
-//            {
-//                Success = true,
-//                Message = "Kayıt başarıyla silindi.",
-//                Data = null
-//            };
-//        }
-//        catch (Exception ex)
-//        {
-//            return new Result
-//            {
-//                Success = false,
-//                Message = $"Silme sırasında hata oluştu: {ex.Message}"
-//            };
-//        }
-//    }
-//}

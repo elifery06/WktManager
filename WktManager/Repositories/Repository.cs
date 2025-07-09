@@ -16,7 +16,9 @@ namespace WktManager.Repositories
             _dbSet = _context.Set<T>();
         }
 
-        public List<T> GetAll() => _dbSet.ToList();
+        //public List<T> GetAll() => _dbSet.ToList();
+        public IQueryable<T> GetAll() => _dbSet.AsQueryable();
+
 
         public T GetById(int id) => _dbSet.Find(id);
 
@@ -27,5 +29,7 @@ namespace WktManager.Repositories
         public void Update(T entity) => _dbSet.Update(entity);
 
         public void Delete(T entity) => _dbSet.Remove(entity);
+
+       
     }
 }

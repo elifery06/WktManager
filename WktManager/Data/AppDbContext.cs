@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WktManager.Models;
+using NetTopologySuite;
 
 namespace WktManager.Data
 {
@@ -9,23 +10,26 @@ namespace WktManager.Data
             : base(options)
         {
         }
+
         public DbSet<WktCoordinate> WktCoordinates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<WktCoordinate>(entity =>
             {
-                entity.ToTable("WktCoordinates");      // Veritabanındaki tablo adı
-                entity.HasKey(e => e.Id);               // Birincil anahtar
+                entity.ToTable("WktCoordinates");
+
+                entity.HasKey(e => e.Id);
+
                 entity.Property(e => e.Name)
                       .IsRequired()
-                      .HasMaxLength(100);               // Name zorunlu ve max 100 karakter
+                      .HasMaxLength(100);
+
                 entity.Property(e => e.WKT)
-                      .IsRequired();                    // WKT alanı zorunlu
+                      .HasColumnName("WKT")
+                      .HasColumnType("geometry")   // PostGIS tipi geometry
+                      .IsRequired();
             });
-
-            
         }
-
     }
 }
