@@ -40,6 +40,7 @@ public class WktCoordinateService : IWktCoordinateService
         var list = _unitOfWork.Repository<WktCoordinate>().GetAll()
             .Select(e => new WktCoordinateDto
             {
+                Id=e.Id,
                 Name = e.Name,
                 WKT = e.WKT.AsText()
             })
@@ -65,7 +66,8 @@ public class WktCoordinateService : IWktCoordinateService
             };
 
         var dto = new WktCoordinateDto
-        {
+        {Id= entity.Id,
+            
             Name = entity.Name,
             WKT = entity.WKT.AsText()
         };
@@ -75,6 +77,40 @@ public class WktCoordinateService : IWktCoordinateService
             Success = true,
             Message = "Kayıt bulundu.",
             Data = dto
+        };
+    }
+    public Result GetPaged(int page, int pageSize)
+    {
+        if (page < 1) page = 1;
+        if (pageSize <= 0) pageSize = 10;
+
+        var query = _unitOfWork.Repository<WktCoordinate>().GetAll();
+
+        var total = query.Count();
+
+        var pagedData = query
+            .OrderBy(x => x.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(e => new WktCoordinateDto
+            {
+                Id = e.Id,
+                Name = e.Name,
+                WKT = e.WKT.AsText()
+            })
+            .ToList();
+
+        var resultData = new
+        {
+            Total = total,
+            Data = pagedData
+        };
+
+        return new Result
+        {
+            Success = true,
+            Message = $"{pagedData.Count} kayıt getirildi.",
+            Data = resultData
         };
     }
 
@@ -99,6 +135,7 @@ public class WktCoordinateService : IWktCoordinateService
         var range = all.Skip(startIndex).Take(count)
             .Select(e => new WktCoordinateDto
             {
+                Id= e.Id,
                 Name = e.Name,
                 WKT = e.WKT.AsText()
             })
@@ -123,6 +160,7 @@ public class WktCoordinateService : IWktCoordinateService
 
         var entity = new WktCoordinate
         {
+            Id= dto.Id,
             Name = dto.Name,
             WKT = ToGeometry(dto.WKT)
         };
@@ -132,6 +170,7 @@ public class WktCoordinateService : IWktCoordinateService
 
         var resultDto = new WktCoordinateDto
         {
+            Id= entity.Id,
             Name = entity.Name,
             WKT = entity.WKT.AsText()
         };
@@ -158,6 +197,7 @@ public class WktCoordinateService : IWktCoordinateService
 
         var entities = dtos.Select(dto => new WktCoordinate
         {
+            Id= dto.Id,
             Name = dto.Name,
             WKT = ToGeometry(dto.WKT)
         }).ToList();
@@ -167,6 +207,7 @@ public class WktCoordinateService : IWktCoordinateService
 
         var resultDtos = entities.Select(e => new WktCoordinateDto
         {
+            Id= e.Id,
             Name = e.Name,
             WKT = e.WKT.AsText()
         }).ToList();
@@ -206,6 +247,7 @@ public class WktCoordinateService : IWktCoordinateService
 
         var updatedDto = new WktCoordinateDto
         {
+            Id=existing.Id,
             Name = existing.Name,
             WKT = existing.WKT.AsText()
         };

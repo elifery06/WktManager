@@ -5,8 +5,8 @@ using WktManager.Repositories;
 
 namespace WktManager.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   [ApiController]
+[Route("api/[controller]")]
     public class WktCoordinateController : ControllerBase
     {
         private readonly IWktCoordinateService _service;
@@ -15,6 +15,23 @@ namespace WktManager.Controllers
         {
             _service = service;
         }
+
+        [HttpGet("paged")]
+        public IActionResult GetPaged(int page = 1, int pageSize = 10)
+        {
+            var result = _service.GetPaged(page, pageSize);
+
+            if (!result.Success)
+                return BadRequest(new { message = result.Message });
+
+            // frontend’in beklediği JSON formatı
+            return Ok(new
+            {
+                total = ((dynamic)result.Data).Total,
+                data = ((dynamic)result.Data).Data
+            });
+        }
+
 
         [HttpGet]
         public IActionResult GetAll()
@@ -26,6 +43,8 @@ namespace WktManager.Controllers
 
             return Ok(new { message = result.Message, data = result.Data });
         }
+
+
 
         [HttpGet("getrange")]
         public IActionResult GetRange(int startIndex, int count)

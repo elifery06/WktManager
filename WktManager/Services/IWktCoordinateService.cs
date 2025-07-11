@@ -5,6 +5,7 @@ using System.Collections.Generic;
 public interface IWktCoordinateService
 {
     Result GetAll();
+    Result GetPaged(int page, int pageSize);
     Result GetById(int id);
     Result GetRange(int startIndex, int count);
     Result Add(WktCoordinateDto dto);
